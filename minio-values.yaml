@@ -1,0 +1,18 @@
+image: 
+  repository: docker.arvancloud.ir/minio/minio
+mcImage:
+  repository: docker.arvancloud.ir/minio/mc
+mode: standalone
+persistence:
+  size: 1Gi
+resources:
+  requests:
+    memory: 512Mi
+
+rootUser: "rootAdmin123"
+rootPassword: "rootAdmin123"
+
+buckets:
+  - name: takhfifan-backup
+    policy: none
+    purge: false
