@@ -16,11 +16,9 @@ kubectl create namespace database
 
 kubectl apply -f pg-cluster.yaml -n database
 
-kubectl apply -f pooler.yaml
+kubectl apply -f pooler.yaml -n database
 
 kubectl logs payment-db-1 -n database | grep "archive"
-
-
 
 helm upgrade --install loki grafana/loki-stack \
   --namespace monitoring \
@@ -40,5 +38,9 @@ kubectl apply -f backup.yaml -n database
 
 kubectl apply -f pitr-cluster.yaml -n database
 
-kubectl exec -it payment-db-pitr-1 -n database -- psql -U postgres -c "GRANT USAGE ON SCHEMA public TO PUBLIC; GRANT SELECT ON ALL TABLES IN SCHEMA public TO PUBLIC;"
+cd recovery-app
+docker build -t recovery-app:v1 . 
+kind load docker-image recovery-app:v1  --name takhfifan
+cd ..
+kubectl apply -f k8s-manifest.yaml -n database
 
