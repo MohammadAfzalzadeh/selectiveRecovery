@@ -68,6 +68,8 @@ helm repo update
 kubectl create namespace minio
 helm install minio minio/minio -f minio-values.yaml -n minio
 ```
+
+![minio-bucket](./images/minio.png)
 📸 **[تصویر ۲: اسکرین‌شات از پنل MinIO که نشان‌دهنده وجود Bucket و WALهای ذخیره شده است]**
 
 ### ۳. نصب CloudNativePG و دیتابیس
@@ -84,6 +86,7 @@ kubectl create namespace monitoring
 helm upgrade --install loki grafana/loki-stack --namespace monitoring -f loki-stack-values.yaml
 helm upgrade --install prometheus-stack prometheus-community/kube-prometheus-stack --namespace monitoring -f kube-prometheus-stack-values.yaml
 ```
+![grafana-loki](./images/grafana-loki.png)
 📸 **[تصویر ۳: داشبورد Grafana که نشان‌دهنده سلامت پادها و مصرف منابع دیتابیس است]**
 
 ### ۵. اجرای اپلیکیشن بازیابی (Recovery App)
@@ -110,6 +113,8 @@ bootstrap:
 
 ### گام دوم: شناسایی و فیلتر کردن کوئری‌های خراب
 از طریق UI اپلیکیشن، بازه زمانی Incident مشخص شده و کوئری‌های مخرب (Bad Queries) به سیستم معرفی می‌شوند.
+![recovery-ui-1](./images/dashboard.png)
+![recovery-ui-2](./images/dashboard-2.png)
 📸 **[تصویر ۴: اسکرین‌شات از رابط کاربری (UI) اپلیکیشن که لاگ‌های Loki را نشان می‌دهد و کوئری‌های بد در آن هایلایت/انتخاب شده‌اند]**
 
 ### گام سوم: اجرای منطقی (Logical Replay) و سوئیچ ترافیک
@@ -119,9 +124,15 @@ bootstrap:
 3. با استفاده از K8s API، `Pooler` را به کلاستر جدید (`payment-db-pitr`) متصل می‌کند.
 4. کلاستر آلوده (`payment-db`) را حذف می‌کند.
 
-📸 **[تصویر ۵: لاگ‌های Terminal اپلیکیشن FastAPI که نشان می‌دهد کوئری‌ها با موفقیت Replay شده و Pooler سوئیچ کرده است]**
 
+![recovery-ui-1](./images/dirty-database-1.png)
+![recovery-ui-1](./images/dirty-database-2.png)
+📸 **[تصویر ۵: بررسی وضعیت دیتابیس کثیف]**
 
+![recovery-ui-1](./images/clean-database-1.png)
+![recovery-ui-1](./images/clean-database-2.png)
+
+📸 **[تصویر 6: بررسی دیتابیس restore شده که نشان می دهد همه چیز به درستی برگشته است و کوئری های مناسب بعد از آن به درستی منتقل شده اند.]**
 
 ---
 **توسعه‌دهنده:** محمد افضل زاده نائینی  
