@@ -1,0 +1,25 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: payment-db-pitr
+spec:
+  instances: 2
+  storage:
+    size: 1Gi
+  externalClusters:
+    - name: payment-db
+      barmanObjectStore:
+        destinationPath: s3://takhfifan-backup/
+        endpointURL: http://minio.minio.svc.cluster.local:9000
+        s3Credentials:
+          accessKeyId:
+            name: minio-creds
+            key: ACCESS_KEY_ID
+          secretAccessKey:
+            name: minio-creds
+            key: ACCESS_SECRET_KEY
+  bootstrap:
+    recovery:
+      source: payment-db
+      recoveryTarget:
+        targetTime: "2026-09-30 20:35:22.871992+00:00"
