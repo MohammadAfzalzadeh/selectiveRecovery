@@ -16,6 +16,10 @@ spec:
   instances: 2 
   storage:
     size: 1Gi
+  postgresql:
+    parameters:
+      log_statement: 'all' # ثبت تمام کوئری‌ها در لاگ
+      log_min_duration_statement: '0'
   backup:
     barmanObjectStore:
       destinationPath: s3://takhfifan-backup/
