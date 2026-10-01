@@ -1,0 +1,80 @@
+grafana:
+  image:
+    registry: docker.arvancloud.ir
+    repository: grafana/grafana
+    tag: 13.2.3-distroless
+
+  sidecar:
+    image:
+      registry: docker.arvancloud.ir
+      repository: kiwigrid/k8s-sidecar
+      tag: 2.11.2
+
+  additionalDataSources:
+    - name: Loki
+      type: loki
+      access: proxy
+      url: http://loki:3100
+      editable: true
+      isDefault: false
+      jsonData:
+        maxLines: 1000
+
+
+prometheusOperator:
+  image:
+    registry: docker.arvancloud.ir
+    repository: prometheus-operator/prometheus-operator
+    tag: v0.93.1
+
+  prometheusConfigReloader:
+    image:
+      registry: docker.arvancloud.ir
+      repository: prometheus-operator/prometheus-config-reloader
+      tag: v0.93.1
+
+
+prometheus:
+  prometheusSpec:
+    image:
+      registry: docker.arvancloud.ir
+      repository: prometheus/prometheus
+      tag: v3.5.1
+
+
+alertmanager:
+  alertmanagerSpec:
+    image:
+      registry: docker.arvancloud.ir
+      repository: prom/alertmanager
+
+
+kubeStateMetrics:
+  enabled: true
+
+kube-state-metrics:
+  image:
+    registry: docker.arvancloud.ir
+    repository: kube-state-metrics/kube-state-metrics
+    tag: v2.20.0
+
+
+prometheus-node-exporter:
+  image:
+    registry: docker.arvancloud.ir
+    repository: prometheus/node-exporter
+    tag: v1.12.1
+    distroless: true
+
+
+loki:
+  enabled: true
+  image:
+    repository: docker.arvancloud.ir/grafana/loki
+
+
+promtail:
+  enabled: true
+  image:
+    registry: docker.arvancloud.ir
+    repository: grafana/promtail

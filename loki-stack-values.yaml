@@ -1,0 +1,17 @@
+grafana:
+  enabled: false
+
+loki:
+  enabled: true
+
+  image:
+    repository: docker.arvancloud.ir/grafana/loki
+    tag: "2.9.15"
+
+promtail:
+  enabled: true
+
+  image:
+    registry: docker.arvancloud.ir
+    repository: grafana/promtail
+    tag: "2.9.15"
