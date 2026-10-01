@@ -1,0 +1,111 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: recovery-app-sa
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: recovery-app-role
+rules:
+  - apiGroups: ["postgresql.cnpg.io"]
+    resources: ["clusters", "poolers"]
+    verbs: ["get", "list", "create", "patch", "delete", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: recovery-app-rolebinding
+subjects:
+  - kind: ServiceAccount
+    name: recovery-app-sa
+roleRef:
+  kind: Role
+  name: recovery-app-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: recovery-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: recovery-app
+  template:
+    metadata:
+      labels:
+        app: recovery-app
+    spec:
+      serviceAccountName: recovery-app-sa 
+      containers:
+        - name: recovery-app
+          image: recovery-app:v1
+          ports:
+            - containerPort: 8000
+          env:
+            - name: LOKI_URL
+              value: "http://loki.monitoring.svc.cluster.local:3100"
+            - name: PITR_DB_NAME
+              value: "postgres"
+            - name: PITR_DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: payment-db-pitr-app
+                  key: host
+            - name: PITR_DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: payment-db-pitr-app
+                  key: user
+            - name: PITR_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: payment-db-pitr-app
+                  key: password
+            - name: PITR_DB_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: payment-db-pitr-app
+                  key: port
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: recovery-app-svc
+spec:
+  type: ClusterIP
+  selector:
+    app: recovery-app
+  ports:
+    - port: 80
+      targetPort: 8000
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: recovery-app-role
+  namespace: database
+rules:
+  - apiGroups: ["postgresql.cnpg.io"]
+    resources: ["poolers", "clusters"]
+    verbs: ["get", "list", "watch", "patch", "update", "delete"]
+  - apiGroups: [""]
+    resources: ["pods", "services"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: recovery-app-rolebinding
+  namespace: database
+subjects:
+  - kind: ServiceAccount
+    name: recovery-app-sa
+    namespace: database
+roleRef:
+  kind: Role
+  name: recovery-app-role
+  apiGroup: rbac.authorization.k8s.io

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>پنل بازیابی دیتابیس (Selective Recovery)</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+    <style>
+        .mono-font {
+            font-family: 'Courier New', Courier, monospace;
+            direction: ltr;
+            text-align: left;
+            font-size: 0.9rem;
+            word-break: break-all;
+        }
+        .nano-text {
+            font-size: 0.75rem;
+            color: #6c757d;
+            direction: ltr;
+            text-align: left;
+            display: block;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body class="bg-light">
+<div class="container py-5">
+    <h2 class="mb-4 text-danger">سیستم بازیابی دیتابیس Payment (Zero Downtime)</h2>
+    
+    <div class="card mb-4 shadow-sm">
+        <div class="card-body">
+            <h5 class="card-title">۱. دریافت لاگ‌ها از زمان حادثه</h5>
+            <div class="row g-3">
+                <div class="col-md-5">
+                    <label class="form-label fw-bold">زمان پایه (Base Time):</label>
+                    <input type="datetime-local" id="baseTimeHuman" class="form-control" step="1">
+                    <span class="nano-text" id="baseTimeNano">Nano: ...</span>
+                    <input type="hidden" id="baseTime" value="0">
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label fw-bold">زمان پایان (End Time):</label>
+                    <input type="datetime-local" id="endTimeHuman" class="form-control" step="1">
+                    <span class="nano-text" id="endTimeNano">Nano: ...</span>
+                    <input type="hidden" id="endTime" value="0">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button class="btn btn-primary w-100 fw-bold" onclick="fetchLogs()">دریافت لاگ‌ها</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4 shadow-sm" id="logsCard" style="display: none;">
+        <div class="card-body">
+            <h5 class="card-title">۲. انتخاب کوئری‌های مخرب (Dirty Data)</h5>
+            <p class="text-muted">کوئری‌هایی که تیک می‌زنید، در دیتابیس جدید Replay نخواهند شد.</p>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover align-middle">
+                    <thead class="table-dark">
+                        <tr>
+                            <th style="width: 80px;" class="text-center">حذف؟</th>
+                            <th style="width: 220px;">زمان وقوع</th>
+                            <th>متن کوئری</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logsTableBody"></tbody>
+                </table>
+            </div>
+            <button class="btn btn-danger btn-lg mt-3 w-100 fw-bold" onclick="startRecovery()">اجرای بازیابی و سوئیچ ترافیک</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let fetchedLogs = [];
+
+    function nanoToDate(nanoStr) {
+        const str = nanoStr.toString();
+        if (str.length <= 6) return new Date(0);
+        const msStr = str.slice(0, -6);
+        return new Date(Number(msStr));
+    }
+
+    function setDefaultDates() {
+        const defaultDate = new Date(1670000000000);
+        const pad = (n) => n.toString().padStart(2, '0');
+        
+        const yyyy = defaultDate.getFullYear();
+        const mm = pad(defaultDate.getMonth() + 1);
+        const dd = pad(defaultDate.getDate());
+        const hh = pad(defaultDate.getHours());
+        const min = pad(defaultDate.getMinutes());
+        const ss = pad(defaultDate.getSeconds());
+        
+        const localISOTime = `${yyyy}-${mm}-${dd}T${hh}:${min}:${ss}`;
+        
+        document.getElementById('baseTimeHuman').value = localISOTime;
+        document.getElementById('endTimeHuman').value = localISOTime;
+        
+        updateNanoDisplay();
+    }
+
+    function updateNanoDisplay() {
+        const baseHuman = document.getElementById('baseTimeHuman').value;
+        const endHuman = document.getElementById('endTimeHuman').value;
+        
+        if (baseHuman) {
+            const ms = new Date(baseHuman).getTime();
+            const nano = ms.toString() + "000000"; 
+            document.getElementById('baseTime').value = nano;
+            document.getElementById('baseTimeNano').innerText = `Nano: ${nano}`;
+        }
+        if (endHuman) {
+            const ms = new Date(endHuman).getTime();
+            const nano = ms.toString() + "000000";
+            document.getElementById('endTime').value = nano;
+            document.getElementById('endTimeNano').innerText = `Nano: ${nano}`;
+        }
+    }
+
+    document.getElementById('baseTimeHuman').addEventListener('input', updateNanoDisplay);
+    document.getElementById('endTimeHuman').addEventListener('input', updateNanoDisplay);
+
+    async function fetchLogs() {
+        const start = document.getElementById('baseTime').value;
+        const end = document.getElementById('endTime').value;
+        
+        if (!start || !end) {
+            alert("لطفاً زمان‌ها را به درستی انتخاب کنید.");
+            return;
+        }
+
+        try {
+            const res = await fetch(`/api/logs?start=${start}&end=${end}`);
+            if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+            fetchedLogs = await res.json();
+        } catch (e) {
+            console.error("خطا در دریافت لاگ‌ها:", e);
+            alert("خطا در دریافت اطلاعات از سرور. لطفاً کنسول مرورگر را بررسی کنید.");
+            return;
+        }
+        
+        const tbody = document.getElementById('logsTableBody');
+        tbody.innerHTML = '';
+        
+        fetchedLogs.forEach((log, index) => {
+            const dateObj = nanoToDate(log.timestamp);
+            const humanDate = dateObj.toLocaleString('fa-IR', {
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', second: '2-digit'
+            });
+            
+            tbody.innerHTML += `
+                <tr>
+                    <td class="text-center">
+                        <input class="form-check-input bad-query-checkbox" type="checkbox" value="${index}">
+                    </td>
+                    <td class="text-nowrap fw-semibold">${humanDate}</td>
+                    <td class="mono-font">${log.query}</td>
+                </tr>
+            `;
+        });
+        
+        document.getElementById('logsCard').style.display = 'block';
+    }
+
+    async function startRecovery() {
+        const checkboxes = document.querySelectorAll('.bad-query-checkbox:checked');
+        const badQueries = Array.from(checkboxes).map(cb => fetchedLogs[cb.value].query);
+        const baseTime = document.getElementById('baseTime').value;
+
+        if (badQueries.length === 0) {
+            if (!confirm("هیچ کوئری‌ای برای حذف انتخاب نشده است. آیا ادامه می‌دهید؟")) return;
+        } else {
+            if (!confirm(`آیا از اجرای فرآیند Recovery و حذف ${badQueries.length} کوئری مخرب اطمینان دارید؟`)) return;
+        }
+
+        try {
+            const res = await fetch('/api/recover', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ base_time: baseTime, bad_queries: badQueries })
+            });
+            const result = await res.json();
+            alert(result.message || "عملیات با موفقیت انجام شد.");
+        } catch (e) {
+            alert("خطا در ارتباط با سرور. لطفاً کنسول را بررسی کنید.");
+            console.error(e);
+        }
+    }
+
+    setDefaultDates();
+</script>
+</body>
+</html>
