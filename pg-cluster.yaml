@@ -1,0 +1,31 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: minio-creds
+type: Opaque
+stringData:
+  ACCESS_KEY_ID: "rootAdmin123"
+  ACCESS_SECRET_KEY: "rootAdmin123"
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: payment-db
+spec:
+  instances: 2 
+  storage:
+    size: 1Gi
+  backup:
+    barmanObjectStore:
+      destinationPath: s3://takhfifan-backup/
+      endpointURL: http://minio.minio.svc.cluster.local:9000
+      s3Credentials:
+        accessKeyId:
+          name: minio-creds
+          key: ACCESS_KEY_ID
+        secretAccessKey:
+          name: minio-creds
+          key: ACCESS_SECRET_KEY
+      wal:
+        compression: gzip
