@@ -1,0 +1,7 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Backup
+metadata:
+  name: payment-db-base-backup
+spec:
+  cluster:
+    name: payment-db
