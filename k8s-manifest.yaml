@@ -48,8 +48,6 @@ spec:
           env:
             - name: LOKI_URL
               value: "http://loki.monitoring.svc.cluster.local:3100"
-            - name: PITR_DB_NAME
-              value: "postgres"
             - name: PITR_DB_HOST
               valueFrom:
                 secretKeyRef:
@@ -70,6 +68,11 @@ spec:
                 secretKeyRef:
                   name: payment-db-pitr-app
                   key: port
+            - name: PITR_DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: payment-db-pitr-app
+                  key: dbname
 ---
 apiVersion: v1
 kind: Service
